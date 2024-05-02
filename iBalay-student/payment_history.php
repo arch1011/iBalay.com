@@ -81,7 +81,6 @@ $result = mysqli_query($conn, $query);
       <div class="row">
         <div class="col-md-12 mt-3 mb-3">
           <button class="btn btn-primary print-hide" onclick="preparePaymentHistory()">Prepare Payment History</button>
-         <button class="btn btn-primary print-hide" id="downloadBtn" style="display: none; margin-top: 10px;" onclick="downloadPaymentHistory()">Download Payment History</button>
         </div>
         <div id="paymentHistoryContent" style="display: none;">
           <?php
@@ -101,6 +100,12 @@ $result = mysqli_query($conn, $query);
           }
           ?>
         </div>
+        <div class="col-md-12 mt-3 mb-3">
+                    <hr>
+                    <!-- Initially hidden, shown after preparing payment history -->
+                    <button id="downloadBtn" class="btn btn-primary print-hide" style="display: none;" onclick="downloadPaymentHistory()">Download Payment History</button>
+                </div>
+
       </div>
     </div>
   </section><!-- End Payment History Card -->
@@ -122,36 +127,43 @@ $result = mysqli_query($conn, $query);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script>
+// Define the downloadPaymentHistory function in the global scope
+function downloadPaymentHistory() {
+    // Open a new tab and navigate to the download script
+    window.open('download_payment_history.php', '_blank');
+}
+
 function preparePaymentHistory() {
     // Show payment history content
     document.getElementById("paymentHistoryContent").style.display = "block";
-    // Show download button
+    
+    // Display the download button immediately
     document.getElementById("downloadBtn").style.display = "block";
-}
-
-function downloadPaymentHistory() {
-    // Get the HTML content of the payment history card
-    const element = document.getElementById('paymentHistoryContent');
 
     // Use HTML2Canvas to render the HTML content as an image
-    html2canvas(element, {
-        allowTaint: true,
-        useCORS: true
-    }).then(canvas => {
+    html2canvas(document.getElementById('paymentHistoryContent')).then(canvas => {
         // Convert the canvas to a data URL
         const dataURL = canvas.toDataURL('image/png');
 
-        // Create a temporary link element
-        const link = document.createElement('a');
-        link.href = dataURL;
-        link.download = 'payment_history.png';
-
-        // Programmatically trigger a click event on the anchor element to initiate download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Send the canvas data to the server using AJAX
+        const xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    // Success, do nothing
+                    console.log("Payment history saved successfully.");
+                } else {
+                    // Error handling
+                    console.error("Error saving payment history:", xhr.responseText);
+                }
+            }
+        };
+        xhr.open('POST', 'save_payment_history.php');
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.send('imageData=' + encodeURIComponent(dataURL));
     });
 }
+
 </script>
 
 

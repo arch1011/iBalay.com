@@ -1,24 +1,40 @@
 <?php
-// Retrieve the payment history content from the request
-$requestBody = file_get_contents('php://input');
-$data = json_decode($requestBody);
 
-if ($data && isset($data->content)) {
-    // Generate a unique filename
-    $filename = 'payment_history_' . uniqid() . '.txt';
-    // Specify the directory path
-    $directory = $_SERVER['DOCUMENT_ROOT'] . '/iBalay.com/payments/';
-    // Save the content to a file
-    file_put_contents($directory . $filename, $data->content);
+// Start the session (if not already started)
+session_start();
 
-    // Return the URL of the saved file
-    $response = array(
-        'url' => '/iBalay.com/payments/' . $filename
-    );
-    echo json_encode($response);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Get the image data
+    $imageData = $_POST['imageData'];
+
+    // Decode the base64 encoded image data
+    $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData));
+
+    // Set the directory path to save the image (assuming the root directory is C:\xampp\htdocs\)
+    $directoryPath = $_SERVER['DOCUMENT_ROOT'] . '/iBalay.com/payments-jpg/';
+
+    // Check if the tenant ID is set in the session
+    if (!isset($_SESSION['TenantID'])) {
+        http_response_code(400);
+        echo 'Error: Tenant ID not found in session.';
+        exit;
+    }
+
+    // Get the tenant ID from session
+    $tenantID = $_SESSION['TenantID'];
+
+    // Set the file path to save the image with tenant's ID
+    $filePath = $directoryPath . 'payment-for-' . $tenantID . '.png';
+
+    // Save the image to the server, overwriting the existing file if it exists
+    if (file_put_contents($filePath, $imageData) !== false) {
+        echo 'Payment history saved successfully.';
+    } else {
+        http_response_code(500);
+        echo 'Error saving payment history. Unable to write to file: ' . $filePath;
+    }
 } else {
-    // Invalid request
-    http_response_code(400);
-    echo json_encode(array('error' => 'Invalid request'));
+    http_response_code(405);
+    echo 'Method Not Allowed';
 }
 ?>
